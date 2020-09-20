@@ -1,6 +1,6 @@
 #include <errno.h>
 #include <getopt.h>
-#include <linux/devlink.h>
+#include "linux/devlink.h"
 #include <linux/genetlink.h>
 #include <stdbool.h>
 #include <stdint.h>

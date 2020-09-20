@@ -4,7 +4,7 @@
  * Descriptions of devlink messages and attributes for pretty print.
  */
 
-#include <linux/devlink.h>
+#include "linux/devlink.h"
 
 #include "utils.h"
 #include "prettymsg.h"
