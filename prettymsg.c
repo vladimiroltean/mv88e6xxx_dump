@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <limits.h>
 #include <linux/genetlink.h>
-#include <linux/rtnetlink.h>
+#include "linux/rtnetlink.h"
 #include <linux/if_link.h>
 #include <libmnl/libmnl.h>
 
