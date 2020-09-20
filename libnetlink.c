@@ -25,7 +25,7 @@
 #include <linux/fib_rules.h>
 #include <linux/if_addrlabel.h>
 #include <linux/if_bridge.h>
-#include <linux/nexthop.h>
+#include "linux/nexthop.h"
 
 #include "libnetlink.h"
 
