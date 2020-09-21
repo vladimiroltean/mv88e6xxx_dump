@@ -32,7 +32,7 @@ EXTRA_DIST = README
 
 ################################################################################
 
-bin_PROGRAMS = mv88e6xxx_dump
+bin_PROGRAMS = mv88e6xxx_dump sja1105_dump
 
 mv88e6xxx_dump_SOURCES =  \
 	libnetlink.h     \
@@ -47,7 +47,29 @@ mv88e6xxx_dump_SOURCES =  \
 	mv88e6xxx_dump.c \
 	$(NULL)
 
+sja1105_dump_SOURCES = \
+	libnetlink.h \
+	mnlg.h \
+	prettymsg.h \
+	utils.h \
+	desc-devlink.c \
+	desc-genlctrl.c \
+	libnetlink.c \
+	mnlg.c \
+	prettymsg.c \
+	packing.c \
+	sja1105_dump.c \
+	sja1105_static_config.c \
+	sja1105_static_config.h \
+	$(NULL)
+
 mv88e6xxx_dump_CPPFLAGS = \
+        -I$(top_srcdir) \
+        -I$(top_builddir) \
+        $(LIBMNL_CFLAGS) \
+        $(NULL)
+
+sja1105_dump_CPPFLAGS = \
         -I$(top_srcdir) \
         -I$(top_builddir) \
         $(LIBMNL_CFLAGS) \
@@ -57,3 +79,6 @@ mv88e6xxx_dump_LDFLAGS = \
         $(LIBMNL_LIBS) \
         $(NULL)
 
+sja1105_dump_LDFLAGS = \
+        $(LIBMNL_LIBS) \
+        $(NULL)
