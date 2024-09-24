@@ -586,11 +586,8 @@ static void region_print_hex(uint8_t *data, int len)
 
 static int port_dump(struct mv88e6xxx_ctx *ctx, int port)
 {
-	char region_name[32];
 	int err, reg;
 	uint16_t *p;
-
-	sprintf(region_name, "port", port);
 
 	err = new_snapshot_port_id(ctx, port, "port", SNAPSHOT_ID + port);
 	if (err) {
