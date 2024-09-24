@@ -367,7 +367,7 @@ static void delete_snapshot(struct mv88e6xxx_ctx *ctx,
 static void queue_snapshot(struct mv88e6xxx_ctx *ctx, struct nlattr **tb)
 {
 	struct nlattr *tb_snapshot[DEVLINK_ATTR_MAX + 1] = {};
-	struct nlattr *nla_sanpshot;
+	struct nlattr *nla_snapshot;
 	const char * region_name;
 	uint32_t snapshot_id;
 	uint32_t port = ~0;
@@ -378,9 +378,9 @@ static void queue_snapshot(struct mv88e6xxx_ctx *ctx, struct nlattr **tb)
 	if (tb[DEVLINK_ATTR_PORT_INDEX])
 		port = mnl_attr_get_u32(tb[DEVLINK_ATTR_PORT_INDEX]);
 
-	mnl_attr_for_each_nested(nla_sanpshot,
+	mnl_attr_for_each_nested(nla_snapshot,
 				 tb[DEVLINK_ATTR_REGION_SNAPSHOTS]) {
-		err = mnl_attr_parse_nested(nla_sanpshot, attr_cb, tb_snapshot);
+		err = mnl_attr_parse_nested(nla_snapshot, attr_cb, tb_snapshot);
 		if (err != MNL_CB_OK)
 			return;
 
