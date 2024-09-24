@@ -45,6 +45,13 @@
 
 #define MAX_PORTS 11
 
+struct mv88e6xxx_snapshot {
+	LIST_ENTRY(mv88e6xxx_snapshot) list;
+	uint32_t port;
+	uint32_t id;
+	const char *region_name;
+};
+
 struct mv88e6xxx_ctx
 {
 	struct mnlg_socket *nlg;
@@ -53,6 +60,7 @@ struct mv88e6xxx_ctx
 	unsigned int chip;
 	int ports;
 	bool repeat;
+	LIST_HEAD(snapshots_head, mv88e6xxx_snapshot) snapshots;
 	uint8_t snapshot_data[MAX_SNAPSHOT_DATA];
 	size_t data_len;
 	bool port_enabled[MAX_PORTS];
@@ -319,9 +327,26 @@ static void first_device(struct mv88e6xxx_ctx *ctx)
 	}
 }
 
-static void delete_snapshot_port_id(struct mv88e6xxx_ctx *ctx,
-			       uint32_t port, const char *region_name,
-			       uint32_t id)
+static void queue_snapshot_port_id(struct mv88e6xxx_ctx *ctx,
+				   uint32_t port, const char *region_name,
+				   uint32_t id)
+{
+	struct mv88e6xxx_snapshot *snapshot;
+
+	snapshot = calloc(1, sizeof(*snapshot));
+	if (!snapshot) {
+		fprintf(stderr, "Low memory");
+		exit(1);
+	}
+
+	snapshot->port = port;
+	snapshot->id = id;
+	snapshot->region_name = region_name;
+	LIST_INSERT_HEAD(&ctx->snapshots, snapshot, list);
+}
+
+static void delete_snapshot(struct mv88e6xxx_ctx *ctx,
+			    struct mv88e6xxx_snapshot *snapshot)
 {
 	struct nlmsghdr *nlh;
 
@@ -329,17 +354,17 @@ static void delete_snapshot_port_id(struct mv88e6xxx_ctx *ctx,
 			       NLM_F_REQUEST | NLM_F_ACK);
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_BUS_NAME, ctx->bus_name);
 	mnl_attr_put_strz(nlh, DEVLINK_ATTR_DEV_NAME, ctx->dev_name);
-	if (port != ~0)
-		mnl_attr_put_u32(nlh, DEVLINK_ATTR_PORT_INDEX, port);
-	mnl_attr_put_strz(nlh, DEVLINK_ATTR_REGION_NAME, region_name);
-	mnl_attr_put_u32(nlh, DEVLINK_ATTR_REGION_SNAPSHOT_ID, id);
+	if (snapshot->port != ~0)
+		mnl_attr_put_u32(nlh, DEVLINK_ATTR_PORT_INDEX, snapshot->port);
+	mnl_attr_put_strz(nlh, DEVLINK_ATTR_REGION_NAME, snapshot->region_name);
+	mnl_attr_put_u32(nlh, DEVLINK_ATTR_REGION_SNAPSHOT_ID, snapshot->id);
 
 	_mnlg_socket_sndrcv(ctx->nlg, nlh, NULL, NULL);
 
 	ctx->repeat = true;
 }
 
-static void delete_snapshot(struct mv88e6xxx_ctx *ctx, struct nlattr **tb)
+static void queue_snapshot(struct mv88e6xxx_ctx *ctx, struct nlattr **tb)
 {
 	struct nlattr *tb_snapshot[DEVLINK_ATTR_MAX + 1] = {};
 	struct nlattr *nla_sanpshot;
@@ -365,7 +390,7 @@ static void delete_snapshot(struct mv88e6xxx_ctx *ctx, struct nlattr **tb)
 		snapshot_id = mnl_attr_get_u32(
 			tb_snapshot[DEVLINK_ATTR_REGION_SNAPSHOT_ID]);
 
-		delete_snapshot_port_id(ctx, port, region_name, snapshot_id);
+		queue_snapshot_port_id(ctx, port, region_name, snapshot_id);
 	}
 }
 
@@ -391,15 +416,16 @@ static int delete_snapshots_cb(const struct nlmsghdr *nlh, void *data)
 	}
 
 	if (tb[DEVLINK_ATTR_REGION_SNAPSHOTS])
-		delete_snapshot(ctx, tb);
+		queue_snapshot(ctx, tb);
 
 	return MNL_CB_OK;
 }
 
 static void delete_snapshots(struct mv88e6xxx_ctx *ctx)
 {
-	struct nlmsghdr *nlh;
 	uint16_t flags = NLM_F_REQUEST | NLM_F_ACK | NLM_F_DUMP;
+	struct mv88e6xxx_snapshot *snapshot, *tmp;
+	struct nlmsghdr *nlh;
 
 	/* Sending a new message while decoding an older message
 	 * results in problems. So keep repeating until all regions
@@ -412,6 +438,12 @@ static void delete_snapshots(struct mv88e6xxx_ctx *ctx)
 
 		_mnlg_socket_sndrcv(ctx->nlg, nlh, delete_snapshots_cb, ctx);
 	} while (ctx->repeat);
+
+	LIST_FOREACH_SAFE(snapshot, &ctx->snapshots, list, tmp) {
+		delete_snapshot(ctx, snapshot);
+		LIST_REMOVE(snapshot, list);
+		free(snapshot);
+	}
 }
 
 static int new_snapshot_port_id(struct mv88e6xxx_ctx *ctx,
